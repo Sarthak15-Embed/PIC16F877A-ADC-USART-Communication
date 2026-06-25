@@ -1,0 +1,113 @@
+ADC value
+   ?
+split into HIGH + LOW
+   ?
+UART sends HIGH
+UART sends LOW
+   ?
+Receiver gets HIGH
+Receiver gets LOW
+   ?
+combine again
+//////////////////////////////////////////////////////////////
+#include "config.h"
+#include <xc.h>
+#include "Usart.h"
+#include "Lcd_8bit.h"
+//#include "ADC.h"
+
+void USART_Data(unsigned int value);  
+void LCD_Data(unsigned int value);
+
+unsigned int Adc_value;
+
+int main()
+{
+    USART_Init();
+    //Adc_Init();
+    lcd_init();
+    lcd_cmd(0x80);
+    lcd_str("Adc_Receive:");
+
+    while(1)
+    {
+        Adc_value = USART_Rx();   // receive ADC value from USART
+        lcd_cmd(0xC0);
+        LCD_Data(Adc_value);      // display on LCD
+        USART_Data(Adc_value);    // also send back via USART (optional)
+    }
+}
+
+// Send ADC value digits via USART
+void USART_Data(unsigned int value)  
+{
+    USART_Tx((value/1000) + '0');
+    USART_Tx(((value/100) % 10) + '0');
+    USART_Tx(((value/10) % 10) + '0');
+    USART_Tx((value % 10) + '0');
+}
+
+// Display ADC value digits on LCD
+void LCD_Data(unsigned int value)
+{
+    lcd_data((value/1000) + '0');
+    lcd_data(((value/100) % 10) + '0');
+    lcd_data(((value/10) % 10) + '0');
+    lcd_data((value % 10) + '0');
+}
+//////////////////////////////////////////////////////////////////////////////////////////
+#include "config.h"
+#include <xc.h>
+#include "Usart.h"
+#include "Lcd_8bit.h"
+//#include "ADC.h"
+
+void Received(char *ptr, char length); 
+void LCD_Data(unsigned int value);
+
+unsigned int Adc_value;
+char buffer[5];   // buffer to hold digits + null terminator
+
+int main()
+{
+    USART_Init();
+    //Adc_Init();
+    lcd_init();
+    lcd_cmd(0x80);
+    lcd_str("Adc_Receive:");
+
+    while(1)
+    {
+        Adc_value = USART_Rx();   // receive ADC value from USART
+        lcd_cmd(0xC0);
+        LCD_Data(Adc_value);      // display on LCD
+
+        // Example: receive 4 characters into buffer
+        Received(buffer, 4);
+        // Now buffer contains received chars if ':' was detected
+    }
+}
+
+// Function to receive a string of given length after ':' marker
+void Received(char *ptr, char length)
+{
+    char i;
+    char temp = USART_Rx();
+    if(temp == ':')
+    {
+        for(i = 0; i < length; i++)
+        {
+            *(ptr+i) = USART_Rx();
+        }
+        *(ptr+length) = '\0'; // null terminate string
+    }
+}
+
+// Display ADC value digits on LCD
+void LCD_Data(unsigned int value)
+{
+    lcd_data((value/1000) + '0');
+    lcd_data(((value/100) % 10) + '0');
+    lcd_data(((value/10) % 10) + '0');
+    lcd_data((value % 10) + '0');
+}
